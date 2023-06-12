@@ -13,16 +13,34 @@ enum Token {
     EOF,
     Ident(String),
     Int(usize),
+
+    // Operators
     Assign,
     Plus,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
+    LessThan,
+    GreaterThan,
     Comma,
+    Eq,
+    NotEq,
+
+    // Keywords
+    Function,
+    Let,
+    True,
+    False,
+    If,
+    Else,
+    Return,
+
     Semicolon,
     Lparen,
     Rparen,
     Lbrace,
     Rbrace,
-    Function,
-    Let,
 }
 
 impl Token {
@@ -30,6 +48,11 @@ impl Token {
         match ident.as_str() {
             "fn" => Self::Function,
             "let" => Self::Let,
+            "true" => Self::True,
+            "false" => Self::False,
+            "if" => Self::If,
+            "else" => Self::Else,
+            "return" => Self::Return,
             _ => Self::Ident(ident),
         }
     }
@@ -70,6 +93,14 @@ impl Lexer {
         self.read_position += 1;
     }
 
+    fn peek_char(&self) -> char {
+        if self.read_position >= self.input.len() {
+            char::default()
+        } else {
+            self.input[self.read_position]
+        }
+    }
+
     fn read_identifier(&mut self) -> String {
         let start = self.position;
         while Self::is_letter(self.ch) {
@@ -91,17 +122,33 @@ impl Lexer {
         str.parse().unwrap()
     }
 
+
     fn skip_whitespaces(&mut self) {
         while Self::is_whitespace(self.ch) {
             self.read_char();
         }
     }
 
+
     fn next_token(&mut self) -> Token {
         self.skip_whitespaces();
 
         let token = match self.ch {
-            '=' => Token::Assign,
+            '=' if self.peek_char() == '=' => {
+                self.read_char();
+                Token::Eq
+            }
+            '='  => Token::Assign,
+            '-' => Token::Minus,
+            '!' if self.peek_char() == '=' => {
+                self.read_char();
+                Token::NotEq
+            }
+            '!' => Token::Bang,
+            '*' => Token::Asterisk,
+            '/' => Token::Slash, 
+            '<' => Token::LessThan,
+            '>' => Token::GreaterThan,
             ';' => Token::Semicolon,
             '(' => Token::Lparen,
             ')' => Token::Rparen,
@@ -139,6 +186,18 @@ fn main() {
             x + y;\n
         };\n
         let result = add(five, ten);
+
+        !-/*5;
+        5< 10 > 5;
+
+        if (5 < 10) {
+            return true;
+        } else {
+            return false;
+        }
+
+        10 == 10;
+        10 != 9;
     ".to_string();
 
     let mut lexer = Lexer::new(input);
