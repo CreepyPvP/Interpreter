@@ -8,11 +8,11 @@ struct Lexer {
 
 
 #[derive(Debug, PartialEq)]
-enum TokenType {
-    Illegal,
+enum Token {
+    Illegal(String),
     EOF,
-    Ident,
-    Int,
+    Ident(String),
+    Int(usize),
     Assign,
     Plus,
     Comma,
@@ -25,19 +25,14 @@ enum TokenType {
     Let,
 }
 
-impl TokenType {
-    fn from_ident(ident: &str) -> Self {
-        match ident {
+impl Token {
+    fn from_ident(ident: String) -> Self {
+        match ident.as_str() {
             "fn" => Self::Function,
             "let" => Self::Let,
-            _ => Self::Ident,
+            _ => Self::Ident(ident),
         }
     }
-}
-
-struct Token {
-    token: TokenType,
-    literal: String,
 }
 
 impl Lexer {
@@ -85,7 +80,7 @@ impl Lexer {
         slice.iter().collect()
     }
 
-    fn read_number(&mut self) -> Result<usize,  {
+    fn read_number(&mut self) -> usize  {
         let start = self.position;
         while Self::is_digit(self.ch) {
             self.read_char();
@@ -93,7 +88,7 @@ impl Lexer {
 
         let slice = &self.input[start..self.position];
         let str: String = slice.iter().collect();
-        str.parse()
+        str.parse().unwrap()
     }
 
     fn skip_whitespaces(&mut self) {
@@ -105,30 +100,33 @@ impl Lexer {
     fn next_token(&mut self) -> Token {
         self.skip_whitespaces();
 
-        let (token, literal) = match self.ch {
-            '=' => (TokenType::Assign, self.ch.to_string()),
-            ';' => (TokenType::Semicolon, self.ch.to_string()),
-            '(' => (TokenType::Lparen, self.ch.to_string()),
-            ')' => (TokenType::Rparen, self.ch.to_string()),
-            ',' => (TokenType::Comma, self.ch.to_string()),
-            '+' => (TokenType::Plus, self.ch.to_string()),
-            '{' => (TokenType::Rbrace, self.ch.to_string()),
-            '}' => (TokenType::Lbrace, self.ch.to_string()),
-            '\0' => (TokenType::EOF, "".to_string()),
+        let token = match self.ch {
+            '=' => Token::Assign,
+            ';' => Token::Semicolon,
+            '(' => Token::Lparen,
+            ')' => Token::Rparen,
+            ',' => Token::Comma,
+            '+' => Token::Plus,
+            '{' => Token::Lbrace,
+            '}' => Token::Rbrace,
+            '\0' => Token::EOF,
 
             _ => {
                 if Lexer::is_letter(self.ch) {
                     let ident = self.read_identifier();
-                    return Token {token: TokenType::from_ident(&ident), literal: ident};
+                    return Token::from_ident(ident);
+                } else if Lexer::is_digit(self.ch) {
+                    let num = self.read_number();
+                    return Token::Int(num);
                 } else {
-                    (TokenType::Illegal, self.ch.to_string())
+                    Token::Illegal(self.ch.to_string())
                 }
             }
         };
 
         self.read_char();
 
-        Token {token, literal}
+        token
     }
 
 }
@@ -146,8 +144,8 @@ fn main() {
     let mut lexer = Lexer::new(input);
     let mut token = lexer.next_token();
     loop {
-        println!("{:?}, {}", token.token, token.literal);
-        if token.token == TokenType::EOF {
+        println!("{:?}", token);
+        if token == Token::EOF {
             break;
         }
         token = lexer.next_token();
