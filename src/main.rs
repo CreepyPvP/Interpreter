@@ -5,7 +5,7 @@ mod lexer;
 mod parser;
 
 use lexer::Lexer;
-
+use parser::Parser;
 
 fn start_interactive() -> Result<(), AppError> {
     loop {
@@ -13,13 +13,18 @@ fn start_interactive() -> Result<(), AppError> {
         std::io::stdin().read_line(&mut input)?;
 
         let lexer = Lexer::new(input);
-        for token in lexer {
-            println!("{:?}", token);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse();
+        println!("{}", program);
+
+        if parser.errors.len() > 0 {
+            println!("Errors: {:?}", parser.errors);
         }
     }
 }
 
-fn main() -> Result<(), AppError>{
+fn main() -> Result<(), AppError> {
     // let input = "
     //     let five = 5;\n
     //     let ten = 10;\n
@@ -50,6 +55,6 @@ fn main() -> Result<(), AppError>{
     //     }
     //     token = lexer.next_token();
     // }
-    
+
     start_interactive()
 }

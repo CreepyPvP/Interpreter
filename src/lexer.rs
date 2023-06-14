@@ -1,12 +1,9 @@
-
 pub struct Lexer {
     input: Vec<char>,
     position: usize,
     read_position: usize,
     ch: char,
 }
-
-
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
@@ -107,12 +104,12 @@ impl Lexer {
         while Self::is_letter(self.ch) {
             self.read_char();
         }
-        
+
         let slice = &self.input[start..self.position];
         slice.iter().collect()
     }
 
-    fn read_number(&mut self) -> usize  {
+    fn read_number(&mut self) -> usize {
         let start = self.position;
         while Self::is_digit(self.ch) {
             self.read_char();
@@ -123,13 +120,11 @@ impl Lexer {
         str.parse().unwrap()
     }
 
-
     fn skip_whitespaces(&mut self) {
         while Self::is_whitespace(self.ch) {
             self.read_char();
         }
     }
-
 
     fn next_token(&mut self) -> Token {
         self.skip_whitespaces();
@@ -139,7 +134,7 @@ impl Lexer {
                 self.read_char();
                 Token::Eq
             }
-            '='  => Token::Assign,
+            '=' => Token::Assign,
             '-' => Token::Minus,
             '!' if self.peek_char() == '=' => {
                 self.read_char();
@@ -147,7 +142,7 @@ impl Lexer {
             }
             '!' => Token::Bang,
             '*' => Token::Asterisk,
-            '/' => Token::Slash, 
+            '/' => Token::Slash,
             '<' => Token::LessThan,
             '>' => Token::GreaterThan,
             ';' => Token::Semicolon,
@@ -176,7 +171,6 @@ impl Lexer {
 
         token
     }
-
 }
 
 impl Iterator for Lexer {
