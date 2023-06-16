@@ -23,6 +23,7 @@ impl std::fmt::Display for Ast {
 #[derive(Debug)]
 enum Statement {
     Let(Ident, Expression),
+    Return(Expression),
 }
 
 #[derive(Debug)]
@@ -60,20 +61,35 @@ impl Parser {
         );
     }
 
-    fn expect_peek<V, T>(&mut self, validator: V) -> Option<T>
-    where
-        V: FnOnce(&Token) -> Option<T>,
-    {
-        let result = validator(&self.peek_token);
-        if result.is_some() {
-            self.next_token();
+    // fn expect_peek<V, T>(&mut self, validator: V) -> Option<T>
+    // where
+    //     V: FnOnce(&Token) -> Option<T>,
+    // {
+    //     let result = validator(&self.peek_token);
+    //     if result.is_some() {
+    //         self.next_token();
+    //     }
+    //     result
+    // }
+
+    fn expect_peek_ident(&mut self) -> Option<String> {
+        match &self.peek_token {
+            Token::Ident(value) => {
+                let value = value.to_owned();
+                self.next_token();
+                Some(value)
+            }
+            _ => {
+                self.peek_error(Token::Ident("Something".to_string()));
+                None
+            }
         }
-        result
     }
 
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.cur_token {
             Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
             _ => None,
         }
     }
@@ -86,15 +102,9 @@ impl Parser {
     }
 
     fn parse_let_statement(&mut self) -> Option<Statement> {
-        let ident = self.expect_peek(|tok| match tok {
-            Token::Ident(ident) => Some(ident.to_owned()),
-            _ => None,
-        });
-
-        let ident = match ident {
+        let ident = match self.expect_peek_ident() {
             Some(ident) => ident,
             None => {
-                self.peek_error(Token::Ident("something".to_string()));
                 return None;
             }
         };
@@ -111,6 +121,16 @@ impl Parser {
             Ident(ident),
             Expression::Identifier(Ident("hello world".to_string())),
         ))
+    }
+
+    fn parse_return_statement(&mut self) -> Option<Statement> {
+        while self.cur_token != Token::Semicolon {
+            self.next_token();
+        }
+
+        Some(Statement::Return(Expression::Identifier(Ident(
+            "fuck off".to_string(),
+        ))))
     }
 
     pub fn parse(&mut self) -> Ast {
