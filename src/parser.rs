@@ -111,6 +111,14 @@ impl Parser {
         );
     }
 
+    fn expect_peek(&mut self, token: Token) -> bool {
+        if self.peek_token != token {
+            self.peek_error(Token::Ident("Something".to_string()));
+            return false;
+        }
+        self.next_token();
+        true
+    }
     fn expect_peek_ident(&mut self) -> Option<String> {
         match &self.peek_token {
             Token::Ident(value) => {
@@ -181,6 +189,7 @@ impl Parser {
             Token::False => Self::parse_bool(false),
             Token::Bang => self.parse_prefix_expression(PrefOp::Not),
             Token::Minus => self.parse_prefix_expression(PrefOp::Minus),
+            Token::Lparen => self.parse_grouped(),
             _ => None,
         }
     }
@@ -209,6 +218,15 @@ impl Parser {
 
     fn parse_bool(value: bool) -> Option<Expression> {
         Some(Expression::Boolean(value))
+    }
+
+    fn parse_grouped(&mut self) -> Option<Expression> {
+        self.next_token();
+        let expr = self.parse_expression(Precedence::Lowest);
+        if !self.expect_peek(Token::Rparen) {
+            return None;
+        }
+        expr
     }
 
     fn parse_infix_expression(&mut self, op: InfOp, left: Expression) -> Option<Expression> {
