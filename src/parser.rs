@@ -253,7 +253,16 @@ impl Parser {
             return None;
         }
 
-        Some(Expression::If(Box::new(condition.unwrap()), Box::new(statement.unwrap()), None))
+        let mut else_stmt: Option<Box<Statement>> = None;
+        if self.peek_token == Token::Else {
+            self.next_token();
+            if !self.expect_peek(Token::Lbrace) {
+                return None;
+            }
+            else_stmt = self.parse_block_statement().map(Box::new);
+        }
+
+        Some(Expression::If(Box::new(condition.unwrap()), Box::new(statement.unwrap()), else_stmt))
     }
 
     fn parse_block_statement(&mut self) -> Option<Statement> {
@@ -267,9 +276,6 @@ impl Parser {
             }
             self.next_token();
         }
-
-        self.next_token();
-
         Some(Statement::Block(statements))
     }
 
