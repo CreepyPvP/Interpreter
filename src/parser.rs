@@ -70,6 +70,7 @@ enum Statement {
     Let(Ident, Expression),
     Return(Expression),
     Expression(Expression),
+    Block(Vec<Statement>),
 }
 
 #[derive(Debug)]
@@ -82,6 +83,7 @@ enum Expression {
     Prefix(PrefOp, Box<Expression>),
     Infix(Box<Expression>, InfOp, Box<Expression>),
     Boolean(bool),
+    If(Box<Expression>, Box<Statement>, Option<Box<Statement>>),
 }
 
 pub struct Parser {
@@ -190,6 +192,7 @@ impl Parser {
             Token::Bang => self.parse_prefix_expression(PrefOp::Not),
             Token::Minus => self.parse_prefix_expression(PrefOp::Minus),
             Token::Lparen => self.parse_grouped(),
+            Token::If => self.parse_if(),
             _ => None,
         }
     }
@@ -227,6 +230,47 @@ impl Parser {
             return None;
         }
         expr
+    }
+
+    fn parse_if(&mut self) -> Option<Expression> {
+        if !self.expect_peek(Token::Lparen) {
+            return None;
+        }
+
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Lowest);
+
+        if !self.expect_peek(Token::Rparen) {
+            return None;
+        }
+        
+        if !self.expect_peek(Token::Lbrace) {
+            return None;
+        }
+
+        let statement = self.parse_block_statement();
+        if statement.is_none() {
+            return None;
+        }
+
+        Some(Expression::If(Box::new(condition.unwrap()), Box::new(statement.unwrap()), None))
+    }
+
+    fn parse_block_statement(&mut self) -> Option<Statement> {
+        let mut statements = vec!();
+        self.next_token();
+
+        while self.cur_token != Token::Rbrace && self.cur_token !=  Token::EOF {
+            let statement = self.parse_statement();
+            if statement.is_some() {
+                statements.push(statement.unwrap());
+            }
+            self.next_token();
+        }
+
+        self.next_token();
+
+        Some(Statement::Block(statements))
     }
 
     fn parse_infix_expression(&mut self, op: InfOp, left: Expression) -> Option<Expression> {
