@@ -20,10 +20,56 @@ impl std::fmt::Display for Ast {
     }
 }
 
+#[derive(PartialOrd, PartialEq)]
+enum Precedence {
+    Lowest,
+    Equals,
+    LessGreater,
+    Sum,
+    Product,
+    Prefix,
+    Call,
+}
+
+#[derive(Debug)]
+enum PrefOp {
+    Not,
+    Minus,
+}
+
+#[derive(Debug)]
+enum InfOp {
+    Plus,
+    Minus,
+    Mul,
+    Div,
+    LessThan,
+    GreaterThan,
+    Eq,
+    NotEq,
+}
+
+impl Token {
+    fn precedence(&self) -> Precedence {
+        match self {
+            Self::Eq => Precedence::Equals,
+            Self::NotEq => Precedence::Equals,
+            Self::LessThan => Precedence::LessGreater,
+            Self::GreaterThan => Precedence::LessGreater,
+            Self::Plus => Precedence::Sum,
+            Self::Minus => Precedence::Sum,
+            Self::Slash => Precedence::Product,
+            Self::Asterisk => Precedence::Product,
+            _ => Precedence::Lowest,
+        }
+    }
+}
+
 #[derive(Debug)]
 enum Statement {
     Let(Ident, Expression),
     Return(Expression),
+    Expression(Expression),
 }
 
 #[derive(Debug)]
@@ -32,6 +78,9 @@ struct Ident(String);
 #[derive(Debug)]
 enum Expression {
     Identifier(Ident),
+    IntLiteral(usize),
+    Prefix(PrefOp, Box<Expression>),
+    Infix(Box<Expression>, InfOp, Box<Expression>),
 }
 
 pub struct Parser {
@@ -61,17 +110,6 @@ impl Parser {
         );
     }
 
-    // fn expect_peek<V, T>(&mut self, validator: V) -> Option<T>
-    // where
-    //     V: FnOnce(&Token) -> Option<T>,
-    // {
-    //     let result = validator(&self.peek_token);
-    //     if result.is_some() {
-    //         self.next_token();
-    //     }
-    //     result
-    // }
-
     fn expect_peek_ident(&mut self) -> Option<String> {
         match &self.peek_token {
             Token::Ident(value) => {
@@ -86,19 +124,113 @@ impl Parser {
         }
     }
 
-    fn parse_statement(&mut self) -> Option<Statement> {
-        match self.cur_token {
-            Token::Let => self.parse_let_statement(),
-            Token::Return => self.parse_return_statement(),
-            _ => None,
-        }
-    }
-
     fn peek_error(&mut self, expected: Token) {
         self.errors.push(AppError::ParserError(format!(
             "expected token {:?}, got token {:?}",
             expected, self.peek_token
         )));
+    }
+
+    fn peek_precedence(&self) -> Precedence {
+        self.peek_token.precedence()
+    }
+
+    fn cur_precedence(&self) -> Precedence {
+        self.cur_token.precedence()
+    }
+
+    fn parse_statement(&mut self) -> Option<Statement> {
+        match self.cur_token {
+            Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
+            _ => self.parse_expression_statement(),
+        }
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Option<Expression> {
+        let mut left = self.parse_prefix();
+        if left.is_none() {
+            self.errors.push(AppError::ParserError(format!(
+                "no prefix parse function for {:?}",
+                self.cur_token
+            )));
+            return None;
+        }
+
+        while self.peek_token != Token::Semicolon && precedence < self.peek_precedence() {
+            self.next_token();
+            left = self.parse_infix(left.unwrap());
+            if left.is_none()  {
+                self.errors.push(AppError::ParserError(format!(
+                    "no infix parse function for {:?}",
+                    self.cur_token
+                )));
+                return None;
+            }
+
+        }
+
+        left
+    }
+
+    fn parse_prefix(&mut self) -> Option<Expression> {
+        match &self.cur_token {
+            Token::Ident(value) => Self::parse_identifier(value.to_owned()),
+            Token::Int(value) => Self::parse_int_literal(value.to_owned()),
+            Token::Bang => self.parse_prefix_expression(PrefOp::Not),
+            Token::Minus => self.parse_prefix_expression(PrefOp::Minus),
+            _ => None,
+        }
+    }
+
+    fn parse_infix(&mut self, left: Expression) -> Option<Expression> {
+        match &self.cur_token {
+            Token::Plus => self.parse_infix_expression(InfOp::Plus, left),
+            Token::Minus => self.parse_infix_expression(InfOp::Minus, left),
+            Token::Slash => self.parse_infix_expression(InfOp::Div, left),
+            Token::Asterisk => self.parse_infix_expression(InfOp::Mul, left),
+            Token::Eq => self.parse_infix_expression(InfOp::Eq, left),
+            Token::NotEq => self.parse_infix_expression(InfOp::NotEq, left),
+            Token::LessThan => self.parse_infix_expression(InfOp::LessThan, left),
+            Token::GreaterThan => self.parse_infix_expression(InfOp::GreaterThan, left),
+            _ => None,
+        }
+    }
+
+    fn parse_identifier(value: String) -> Option<Expression> {
+        Some(Expression::Identifier(Ident(value)))
+    }
+
+    fn parse_int_literal(value: usize) -> Option<Expression> {
+        Some(Expression::IntLiteral(value))
+    }
+
+    fn parse_infix_expression(&mut self, op: InfOp, left: Expression) -> Option<Expression> {
+        let precedence = self.cur_token.precedence();
+        self.next_token();
+        if let Some(right) = self.parse_expression(precedence) {
+            return Some(Expression::Infix(Box::new(left), op, Box::new(right)));
+        }
+        None
+    }
+
+    fn parse_prefix_expression(&mut self, op: PrefOp) -> Option<Expression> {
+        self.next_token();
+        if let Some(right) = self.parse_expression(Precedence::Prefix) {
+            return Some(Expression::Prefix(op, Box::new(right)));
+        }
+        None
+    }
+
+    fn parse_expression_statement(&mut self) -> Option<Statement> {
+        let expr = match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => expr,
+            None => return None,
+        };
+        if self.peek_token == Token::Semicolon {
+            self.next_token();
+        }
+        Some(Statement::Expression(expr))
     }
 
     fn parse_let_statement(&mut self) -> Option<Statement> {
