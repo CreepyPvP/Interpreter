@@ -81,6 +81,7 @@ enum Expression {
     IntLiteral(usize),
     Prefix(PrefOp, Box<Expression>),
     Infix(Box<Expression>, InfOp, Box<Expression>),
+    Boolean(bool),
 }
 
 pub struct Parser {
@@ -160,14 +161,13 @@ impl Parser {
         while self.peek_token != Token::Semicolon && precedence < self.peek_precedence() {
             self.next_token();
             left = self.parse_infix(left.unwrap());
-            if left.is_none()  {
+            if left.is_none() {
                 self.errors.push(AppError::ParserError(format!(
                     "no infix parse function for {:?}",
                     self.cur_token
                 )));
                 return None;
             }
-
         }
 
         left
@@ -177,6 +177,8 @@ impl Parser {
         match &self.cur_token {
             Token::Ident(value) => Self::parse_identifier(value.to_owned()),
             Token::Int(value) => Self::parse_int_literal(value.to_owned()),
+            Token::True => Self::parse_bool(true),
+            Token::False => Self::parse_bool(false),
             Token::Bang => self.parse_prefix_expression(PrefOp::Not),
             Token::Minus => self.parse_prefix_expression(PrefOp::Minus),
             _ => None,
@@ -203,6 +205,10 @@ impl Parser {
 
     fn parse_int_literal(value: usize) -> Option<Expression> {
         Some(Expression::IntLiteral(value))
+    }
+
+    fn parse_bool(value: bool) -> Option<Expression> {
+        Some(Expression::Boolean(value))
     }
 
     fn parse_infix_expression(&mut self, op: InfOp, left: Expression) -> Option<Expression> {
@@ -245,14 +251,14 @@ impl Parser {
             return None;
         }
 
-        while self.cur_token != Token::Semicolon {
+        self.next_token();
+        self.next_token();
+        if let Some(expr) = self.parse_expression(Precedence::Lowest) {
             self.next_token();
+            return Some(Statement::Let(Ident(ident), expr));
         }
 
-        Some(Statement::Let(
-            Ident(ident),
-            Expression::Identifier(Ident("hello world".to_string())),
-        ))
+        None
     }
 
     fn parse_return_statement(&mut self) -> Option<Statement> {
