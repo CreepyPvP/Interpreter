@@ -84,6 +84,7 @@ enum Expression {
     Infix(Box<Expression>, InfOp, Box<Expression>),
     Boolean(bool),
     If(Box<Expression>, Box<Statement>, Option<Box<Statement>>),
+    FunctionLiteral(Vec<Ident>, Box<Statement>),
 }
 
 pub struct Parser {
@@ -193,6 +194,7 @@ impl Parser {
             Token::Minus => self.parse_prefix_expression(PrefOp::Minus),
             Token::Lparen => self.parse_grouped(),
             Token::If => self.parse_if(),
+            Token::Function => self.parse_fn_literal(),
             _ => None,
         }
     }
@@ -277,6 +279,54 @@ impl Parser {
             self.next_token();
         }
         Some(Statement::Block(statements))
+    }
+
+    fn parse_fn_literal(&mut self) -> Option<Expression> {
+        if  !self.expect_peek(Token::Lparen) {
+            return None;
+        }
+
+        let params = match self.parse_fn_params() {
+            Some(params) => params,
+            None => return None,
+        };
+        
+        if !self.expect_peek(Token::Lbrace) {
+            return None;
+        }
+
+        let body = match self.parse_block_statement() {
+            Some(stmt) => Box::new(stmt),
+            None => return None,
+        };
+
+        Some(Expression::FunctionLiteral(params, body))
+    }
+
+    fn parse_fn_params(&mut self) -> Option<Vec<Ident>> {
+        self.next_token();
+
+        let mut idents = vec!();
+        
+        match &self.cur_token {
+            Token::Ident(value) => idents.push(Ident(value.clone())),
+            Token::Rparen => return Some(idents),
+            _ => return None,
+        }
+
+        while self.peek_token == Token::Comma {
+            self.next_token();
+            self.next_token();
+            
+            match &self.cur_token {
+                Token::Ident(value) => idents.push(Ident(value.clone())),
+                _ => return None,
+            }
+        }
+
+        self.expect_peek(Token::Rparen);
+
+        Some(idents)
     }
 
     fn parse_infix_expression(&mut self, op: InfOp, left: Expression) -> Option<Expression> {
