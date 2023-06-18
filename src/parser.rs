@@ -147,10 +147,6 @@ impl Parser {
         self.peek_token.precedence()
     }
 
-    fn cur_precedence(&self) -> Precedence {
-        self.cur_token.precedence()
-    }
-
     fn parse_statement(&mut self) -> Option<Statement> {
         match self.cur_token {
             Token::Let => self.parse_let_statement(),
@@ -380,13 +376,15 @@ impl Parser {
     }
 
     fn parse_return_statement(&mut self) -> Option<Statement> {
-        while self.cur_token != Token::Semicolon {
-            self.next_token();
-        }
+        self.next_token();
 
-        Some(Statement::Return(Expression::Identifier(Ident(
-            "fuck off".to_string(),
-        ))))
+        let expr = match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => expr,
+            None => return None,
+        };
+        self.expect_peek(Token::Semicolon);
+
+        Some(Statement::Return(expr))
     }
 
     pub fn parse(&mut self) -> Ast {

@@ -82,7 +82,7 @@ impl Lexer {
     }
 
     fn read_char(&mut self) {
-        self.ch = match (self.read_position >= self.input.len()) {
+        self.ch = match self.read_position >= self.input.len() {
             true => char::default(),
             false => self.input[self.read_position],
         };
