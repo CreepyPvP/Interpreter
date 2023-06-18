@@ -60,6 +60,7 @@ impl Token {
             Self::Minus => Precedence::Sum,
             Self::Slash => Precedence::Product,
             Self::Asterisk => Precedence::Product,
+            Self::Lparen => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }
@@ -85,6 +86,7 @@ enum Expression {
     Boolean(bool),
     If(Box<Expression>, Box<Statement>, Option<Box<Statement>>),
     FunctionLiteral(Vec<Ident>, Box<Statement>),
+    Call(Box<Expression>, Vec<Expression>),
 }
 
 pub struct Parser {
@@ -205,9 +207,46 @@ impl Parser {
             Token::NotEq => self.parse_infix_expression(InfOp::NotEq, left),
             Token::LessThan => self.parse_infix_expression(InfOp::LessThan, left),
             Token::GreaterThan => self.parse_infix_expression(InfOp::GreaterThan, left),
+            Token::Lparen => self.parse_call_expression(left),
             _ => None,
         }
     }
+
+    fn parse_call_expression(&mut self, left: Expression) -> Option<Expression> {
+        match self.parse_call_arguments() {
+            Some(args) => Some(Expression::Call(Box::new(left), args)),
+            None => None,
+        }
+    }
+
+    fn parse_call_arguments(&mut self) -> Option<Vec<Expression>> {
+        self.next_token();
+        let mut expressions = vec!();
+        if self.cur_token == Token::Rparen {
+            return Some(expressions);
+        }
+
+        expressions.push(match self.parse_expression(Precedence::Lowest) {
+            Some(expr) => expr,
+            None => return None,
+        });
+
+        while self.peek_token == Token::Comma {
+            self.next_token(); 
+            self.next_token(); 
+
+            expressions.push(match self.parse_expression(Precedence::Lowest) {
+                Some(expr) => expr,
+                None => return None,
+            });
+        }
+
+        if !self.expect_peek(Token::Rparen) {
+            return None;
+        }
+
+        Some(expressions)
+    } 
 
     fn parse_identifier(value: String) -> Option<Expression> {
         Some(Expression::Identifier(Ident(value)))
