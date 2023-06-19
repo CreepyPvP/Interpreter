@@ -38,7 +38,7 @@ pub enum PrefOp {
 }
 
 #[derive(Debug)]
-enum InfOp {
+pub enum InfOp {
     Plus,
     Minus,
     Mul,
