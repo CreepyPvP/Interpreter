@@ -5,28 +5,48 @@ pub enum Object {
     Integer(i64),
     Boolean(bool),
     Null,
+    Return(Box<Object>),
 }
 
 
 pub fn eval(ast: Ast) -> Object {
-    eval_statements(ast.statements)
+    eval_program(ast.statements)
 }
 
-fn eval_statements(stmts: Vec<Statement>) -> Object {
+fn eval_program(stmts: Vec<Statement>) -> Object {
     let mut result = Object::Null;
     for stmt in stmts {
         result = eval_statement(stmt);
+
+        if let Object::Return(ret) = result {
+            return *ret;
+        }
     }
 
     result
 }
 
+
 fn eval_statement(stmt: Statement) -> Object {
     match stmt {
         Statement::Expression(expr) => eval_expression(expr),
-        Statement::Block(exprs) => eval_statements(exprs),
+        Statement::Block(exprs) => eval_block_statement(exprs),
+        Statement::Return(expr) => eval_return_statement(expr),
         _ => Object::Null,
     }
+}
+
+fn eval_block_statement(stmts: Vec<Statement>) -> Object {
+    let mut result = Object::Null;
+    for stmt in stmts {
+        result = eval_statement(stmt);
+
+        if matches!(result, Object::Return(_)) {
+            return result;
+        }
+    }
+
+    result
 }
 
 fn eval_expression(expr: Expression) -> Object {
@@ -38,6 +58,10 @@ fn eval_expression(expr: Expression) -> Object {
         Expression::If(expr, stmt0, stmt1) => eval_if_expression(*expr, *stmt0, stmt1.map(|v| *v)),
         _ => Object::Null,
     }
+}
+
+fn eval_return_statement(expr: Expression) -> Object {
+    Object::Return(Box::new(eval_expression(expr)))
 }
 
 fn eval_if_expression(expr: Expression, stmt0: Statement, stmt1: Option<Statement>) -> Object {
