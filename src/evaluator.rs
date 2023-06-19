@@ -9,8 +9,12 @@ pub enum Object {
 
 
 pub fn eval(ast: Ast) -> Object {
+    eval_statements(ast.statements)
+}
+
+fn eval_statements(stmts: Vec<Statement>) -> Object {
     let mut result = Object::Null;
-    for stmt in ast.statements {
+    for stmt in stmts {
         result = eval_statement(stmt);
     }
 
@@ -20,6 +24,7 @@ pub fn eval(ast: Ast) -> Object {
 fn eval_statement(stmt: Statement) -> Object {
     match stmt {
         Statement::Expression(expr) => eval_expression(expr),
+        Statement::Block(exprs) => eval_statements(exprs),
         _ => Object::Null,
     }
 }
@@ -30,6 +35,15 @@ fn eval_expression(expr: Expression) -> Object {
         Expression::Boolean(value) => Object::Boolean(value),
         Expression::Prefix(op, expr) => eval_pref_expression(op, *expr),
         Expression::Infix(left, op, right) => eval_inf_expression(*left, op, *right),
+        Expression::If(expr, stmt0, stmt1) => eval_if_expression(*expr, *stmt0, stmt1.map(|v| *v)),
+        _ => Object::Null,
+    }
+}
+
+fn eval_if_expression(expr: Expression, stmt0: Statement, stmt1: Option<Statement>) -> Object {
+    match expect_bool(expr) {
+        true => eval_statement(stmt0),
+        false if stmt1.is_some() => eval_statement(stmt1.unwrap()),
         _ => Object::Null,
     }
 }
