@@ -43,8 +43,8 @@ fn eval_inf_expression(left: Expression, op: InfOp, right: Expression) -> Object
 
         InfOp::Eq => Object::Boolean(eval_expression(left) == eval_expression(right)),
         InfOp::NotEq => Object::Boolean(eval_expression(left) != eval_expression(right)),
-
-        _ => Object::Null,
+        InfOp::GreaterThan => Object::Boolean(expect_int(left) > expect_int(right)),
+        InfOp::LessThan => Object::Boolean(expect_int(left) < expect_int(right)),
     }
 }
 
