@@ -75,7 +75,7 @@ pub enum Statement {
 }
 
 #[derive(Debug)]
-pub struct Ident(String);
+pub struct Ident(pub String);
 
 #[derive(Debug)]
 pub enum Expression {

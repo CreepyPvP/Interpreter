@@ -1,8 +1,10 @@
+use environment::Environment;
 use error::AppError;
 
 mod error;
 mod lexer;
 mod parser;
+mod environment;
 mod evaluator;
 
 use evaluator::{eval, Object};
@@ -10,6 +12,7 @@ use lexer::Lexer;
 use parser::Parser;
 
 fn start_interactive() -> Result<(), AppError> {
+    let mut env = Environment::new();
     loop {
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
@@ -23,7 +26,7 @@ fn start_interactive() -> Result<(), AppError> {
             println!("Errors: {:?}", parser.errors);
         }
 
-        match eval(program) {
+        match eval(program, &mut env) {
             Object::Null => (),
             result => println!("{:?}", result),
         }
