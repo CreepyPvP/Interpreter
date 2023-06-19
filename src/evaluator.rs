@@ -1,4 +1,7 @@
-use crate::{parser::{Statement, Ast, Expression, PrefOp, InfOp, Ident}, environment::Environment};
+use crate::{
+    environment::Environment,
+    parser::{Ast, Expression, Ident, InfOp, PrefOp, Statement},
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Object {
@@ -7,7 +10,6 @@ pub enum Object {
     Null,
     Return(Box<Object>),
 }
-
 
 pub fn eval(ast: Ast, env: &mut Environment) -> Object {
     eval_program(ast.statements, env)
@@ -25,7 +27,6 @@ fn eval_program(stmts: Vec<Statement>, env: &mut Environment) -> Object {
 
     result
 }
-
 
 fn eval_statement(stmt: Statement, env: &mut Environment) -> Object {
     match stmt {
@@ -62,7 +63,9 @@ fn eval_expression(expr: Expression, env: &mut Environment) -> Object {
         Expression::Boolean(value) => Object::Boolean(value),
         Expression::Prefix(op, expr) => eval_pref_expression(op, *expr, env),
         Expression::Infix(left, op, right) => eval_inf_expression(*left, op, *right, env),
-        Expression::If(expr, stmt0, stmt1) => eval_if_expression(*expr, *stmt0, stmt1.map(|v| *v), env),
+        Expression::If(expr, stmt0, stmt1) => {
+            eval_if_expression(*expr, *stmt0, stmt1.map(|v| *v), env)
+        }
         Expression::Identifier(Ident(ident)) => eval_ident_expression(ident, env),
         _ => Object::Null,
     }
@@ -79,7 +82,12 @@ fn eval_return_statement(expr: Expression, env: &mut Environment) -> Object {
     Object::Return(Box::new(eval_expression(expr, env)))
 }
 
-fn eval_if_expression(expr: Expression, stmt0: Statement, stmt1: Option<Statement>, env: &mut Environment) -> Object {
+fn eval_if_expression(
+    expr: Expression,
+    stmt0: Statement,
+    stmt1: Option<Statement>,
+    env: &mut Environment,
+) -> Object {
     match expect_bool(expr, env) {
         true => eval_statement(stmt0, env),
         false if stmt1.is_some() => eval_statement(stmt1.unwrap(), env),
@@ -87,7 +95,12 @@ fn eval_if_expression(expr: Expression, stmt0: Statement, stmt1: Option<Statemen
     }
 }
 
-fn eval_inf_expression(left: Expression, op: InfOp, right: Expression, env: &mut Environment) -> Object {
+fn eval_inf_expression(
+    left: Expression,
+    op: InfOp,
+    right: Expression,
+    env: &mut Environment,
+) -> Object {
     match op {
         InfOp::Mul => Object::Integer(expect_int(left, env) * expect_int(right, env)),
         InfOp::Div => Object::Integer(expect_int(left, env) / expect_int(right, env)),
@@ -119,6 +132,6 @@ fn expect_bool(expr: Expression, env: &mut Environment) -> bool {
     match eval_expression(expr, env) {
         Object::Boolean(value) => value,
         Object::Integer(value) => value != 0,
-        _ => panic!("Expected boolean"), 
+        _ => panic!("Expected boolean"),
     }
 }

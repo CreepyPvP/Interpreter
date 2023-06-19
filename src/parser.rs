@@ -221,7 +221,7 @@ impl Parser {
 
     fn parse_call_arguments(&mut self) -> Option<Vec<Expression>> {
         self.next_token();
-        let mut expressions = vec!();
+        let mut expressions = vec![];
         if self.cur_token == Token::Rparen {
             return Some(expressions);
         }
@@ -232,8 +232,8 @@ impl Parser {
         });
 
         while self.peek_token == Token::Comma {
-            self.next_token(); 
-            self.next_token(); 
+            self.next_token();
+            self.next_token();
 
             expressions.push(match self.parse_expression(Precedence::Lowest) {
                 Some(expr) => expr,
@@ -246,7 +246,7 @@ impl Parser {
         }
 
         Some(expressions)
-    } 
+    }
 
     fn parse_identifier(value: String) -> Option<Expression> {
         Some(Expression::Identifier(Ident(value)))
@@ -280,7 +280,7 @@ impl Parser {
         if !self.expect_peek(Token::Rparen) {
             return None;
         }
-        
+
         if !self.expect_peek(Token::Lbrace) {
             return None;
         }
@@ -299,14 +299,18 @@ impl Parser {
             else_stmt = self.parse_block_statement().map(Box::new);
         }
 
-        Some(Expression::If(Box::new(condition.unwrap()), Box::new(statement.unwrap()), else_stmt))
+        Some(Expression::If(
+            Box::new(condition.unwrap()),
+            Box::new(statement.unwrap()),
+            else_stmt,
+        ))
     }
 
     fn parse_block_statement(&mut self) -> Option<Statement> {
-        let mut statements = vec!();
+        let mut statements = vec![];
         self.next_token();
 
-        while self.cur_token != Token::Rbrace && self.cur_token !=  Token::EOF {
+        while self.cur_token != Token::Rbrace && self.cur_token != Token::EOF {
             let statement = self.parse_statement();
             if statement.is_some() {
                 statements.push(statement.unwrap());
@@ -317,7 +321,7 @@ impl Parser {
     }
 
     fn parse_fn_literal(&mut self) -> Option<Expression> {
-        if  !self.expect_peek(Token::Lparen) {
+        if !self.expect_peek(Token::Lparen) {
             return None;
         }
 
@@ -325,7 +329,7 @@ impl Parser {
             Some(params) => params,
             None => return None,
         };
-        
+
         if !self.expect_peek(Token::Lbrace) {
             return None;
         }
@@ -341,8 +345,8 @@ impl Parser {
     fn parse_fn_params(&mut self) -> Option<Vec<Ident>> {
         self.next_token();
 
-        let mut idents = vec!();
-        
+        let mut idents = vec![];
+
         match &self.cur_token {
             Token::Ident(value) => idents.push(Ident(value.clone())),
             Token::Rparen => return Some(idents),
@@ -352,7 +356,7 @@ impl Parser {
         while self.peek_token == Token::Comma {
             self.next_token();
             self.next_token();
-            
+
             match &self.cur_token {
                 Token::Ident(value) => idents.push(Ident(value.clone())),
                 _ => return None,

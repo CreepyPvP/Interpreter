@@ -1,11 +1,11 @@
 use environment::Environment;
 use error::AppError;
 
+mod environment;
 mod error;
+mod evaluator;
 mod lexer;
 mod parser;
-mod environment;
-mod evaluator;
 
 use evaluator::{eval, Object};
 use lexer::Lexer;
