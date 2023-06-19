@@ -10,7 +10,7 @@ pub enum Token {
     Illegal(String),
     EOF,
     Ident(String),
-    Int(usize),
+    Int(i64),
 
     // Operators
     Assign,
@@ -109,7 +109,7 @@ impl Lexer {
         slice.iter().collect()
     }
 
-    fn read_number(&mut self) -> usize {
+    fn read_number(&mut self) -> i64 {
         let start = self.position;
         while Self::is_digit(self.ch) {
             self.read_char();

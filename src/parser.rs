@@ -5,7 +5,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Ast {
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
 
 impl Ast {
@@ -32,7 +32,7 @@ enum Precedence {
 }
 
 #[derive(Debug)]
-enum PrefOp {
+pub enum PrefOp {
     Not,
     Minus,
 }
@@ -67,7 +67,7 @@ impl Token {
 }
 
 #[derive(Debug)]
-enum Statement {
+pub enum Statement {
     Let(Ident, Expression),
     Return(Expression),
     Expression(Expression),
@@ -75,12 +75,12 @@ enum Statement {
 }
 
 #[derive(Debug)]
-struct Ident(String);
+pub struct Ident(String);
 
 #[derive(Debug)]
-enum Expression {
+pub enum Expression {
     Identifier(Ident),
-    IntLiteral(usize),
+    IntLiteral(i64),
     Prefix(PrefOp, Box<Expression>),
     Infix(Box<Expression>, InfOp, Box<Expression>),
     Boolean(bool),
@@ -252,7 +252,7 @@ impl Parser {
         Some(Expression::Identifier(Ident(value)))
     }
 
-    fn parse_int_literal(value: usize) -> Option<Expression> {
+    fn parse_int_literal(value: i64) -> Option<Expression> {
         Some(Expression::IntLiteral(value))
     }
 

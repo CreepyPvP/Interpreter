@@ -3,7 +3,9 @@ use error::AppError;
 mod error;
 mod lexer;
 mod parser;
+mod evaluator;
 
+use evaluator::{eval, Object};
 use lexer::Lexer;
 use parser::Parser;
 
@@ -16,10 +18,14 @@ fn start_interactive() -> Result<(), AppError> {
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse();
-        println!("{}", program);
 
         if parser.errors.len() > 0 {
             println!("Errors: {:?}", parser.errors);
+        }
+
+        match eval(program) {
+            Object::Null => (),
+            result => println!("{:?}", result),
         }
     }
 }
