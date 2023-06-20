@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     environment::Environment,
     parser::{Ast, Expression, Ident, InfOp, PrefOp, Statement},
@@ -9,6 +11,7 @@ pub enum Object {
     Boolean(bool),
     Null,
     Return(Box<Object>),
+    Function(Vec<Ident>, Statement, Environment),
 }
 
 pub fn eval(ast: Ast, env: &mut Environment) -> Object {
@@ -63,18 +66,36 @@ fn eval_expression(expr: Expression, env: &mut Environment) -> Object {
         Expression::Boolean(value) => Object::Boolean(value),
         Expression::Prefix(op, expr) => eval_pref_expression(op, *expr, env),
         Expression::Infix(left, op, right) => eval_inf_expression(*left, op, *right, env),
-        Expression::If(expr, stmt0, stmt1) => {
-            eval_if_expression(*expr, *stmt0, stmt1.map(|v| *v), env)
-        }
+        Expression::If(expr, stmt0, stmt1) => eval_if_expression(*expr, *stmt0, stmt1.map(|v| *v), env),
         Expression::Identifier(Ident(ident)) => eval_ident_expression(ident, env),
-        _ => Object::Null,
+        Expression::FunctionLiteral(params, stmt) => eval_fn_literal_expression(params, *stmt, env),
+        Expression::Call(expr, params) => eval_fn_call(*expr, params, env),
     }
+}
+
+fn eval_fn_call(expr: Expression, param_exprs: Vec<Expression>, env: &mut Environment) -> Object {
+    let (params, stmt, mut fn_env) = match eval_expression(expr, env) {
+        Object::Function(params, stmt, env) => (params, stmt, env),
+        _ => panic!("Expected callable expression"),
+    };
+
+    for (i, param) in params.iter().enumerate() {
+        let value = param_exprs.get(i).map(|expr| eval_expression(expr.to_owned(), env)).unwrap_or(Object::Null);
+        let Ident(key) = param;
+        fn_env.set(key.to_owned(), value);
+    }
+
+    eval_program(vec!(stmt), &mut fn_env)
+}
+
+fn eval_fn_literal_expression(params: Vec<Ident>, stmt: Statement, env: &mut Environment) -> Object {
+    Object::Function(params, stmt, env.clone())
 }
 
 fn eval_ident_expression(ident: String, env: &mut Environment) -> Object {
     match env.get(&ident) {
         Some(value) => value,
-        None => Object::Null,
+        None => panic!("Unknown identifier: {}", ident),
     }
 }
 

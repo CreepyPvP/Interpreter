@@ -31,13 +31,13 @@ enum Precedence {
     Call,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PrefOp {
     Not,
     Minus,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum InfOp {
     Plus,
     Minus,
@@ -66,7 +66,7 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Let(Ident, Expression),
     Return(Expression),
@@ -74,10 +74,10 @@ pub enum Statement {
     Block(Vec<Statement>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ident(pub String);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Identifier(Ident),
     IntLiteral(i64),
